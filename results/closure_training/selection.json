@@ -1,0 +1,6 @@
+{
+  "validation_schedule": "separated",
+  "selected_closure_weight": 10.0,
+  "test_schedule": "late_separated",
+  "stress_schedule": "alternating"
+}

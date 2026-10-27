@@ -1,0 +1,17 @@
+{
+  "score": "S_q(m)=rank_DTE(m) if rank_prediction(m)<=q, else +infinity",
+  "initial_untuned_reference_q": 0.25,
+  "recommended_q_from_leave_one_system_out": 0.05,
+  "selection": "argmin S_q",
+  "interpretation": "DTE is used only among prediction-admissible candidates",
+  "ground_truth_use": "ED is evaluation-only; it does not set q or select a model",
+  "tested_q": [
+    0.05,
+    0.1,
+    0.2,
+    0.25,
+    0.3,
+    0.4,
+    0.5
+  ]
+}

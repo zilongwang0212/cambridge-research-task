@@ -1,0 +1,11 @@
+held_out_system,family,chosen_threshold,test_dynamics_percentile,test_selected_model
+L1_balanced,Linear,0.05,0.030303030303030304,12
+L2_persistent,Linear,0.05,0.010101010101010102,89
+L3_strong_action,Linear,0.05,0.0,79
+L4_negative_lag,Linear,0.05,0.0,2
+L5_strong_lag,Linear,0.05,0.010101010101010102,79
+N1_balanced,Nonlinear,0.05,0.0,23
+N2_strong_interaction,Nonlinear,0.05,0.020202020202020204,63
+N3_negative_interaction,Nonlinear,0.05,0.0,17
+N4_opposing_curvature,Nonlinear,0.05,0.1111111111111111,11
+N5_strong_lag,Nonlinear,0.05,0.0,25

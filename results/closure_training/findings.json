@@ -1,0 +1,38 @@
+{
+  "selection_protocol": {
+    "validation_schedule": "separated",
+    "selected_closure_weight": 10.0,
+    "test_schedule": "late_separated",
+    "stress_schedule": "alternating"
+  },
+  "horizon": 16,
+  "held_out_test_vs_response_split": {
+    "closure_mean": 0.0008192,
+    "baseline_mean": 0.0021890,
+    "relative_change": -0.6258,
+    "paired_seed_wins": 5,
+    "num_seeds": 5
+  },
+  "held_out_test_vs_predictive": {
+    "closure_mean": 0.0008192,
+    "baseline_mean": 0.0011270,
+    "relative_change": -0.2731,
+    "paired_seed_wins": 4,
+    "num_seeds": 5
+  },
+  "stress_vs_response_split": {
+    "closure_mean": 0.0054820,
+    "baseline_mean": 0.0073800,
+    "relative_change": -0.2572,
+    "paired_seed_wins": 3,
+    "num_seeds": 5
+  },
+  "seen_block_vs_response_split": {
+    "closure_mean": 0.0080870,
+    "baseline_mean": 0.0027150,
+    "relative_change": 1.9786,
+    "paired_seed_wins": 0,
+    "num_seeds": 5
+  },
+  "interpretation": "Closure supervision improves the held-out pulse composition, but worsens the seen contiguous block. It is evidence that transition closure matters, not evidence of universally correct dynamics."
+}

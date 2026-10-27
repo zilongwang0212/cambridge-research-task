@@ -1,0 +1,29 @@
+{
+  "repeats": 20,
+  "systems": 10,
+  "candidates_per_pool": 100,
+  "contexts": 250,
+  "horizon": 16,
+  "policies": [
+    "single_early",
+    "single_middle",
+    "single_late",
+    "block_early",
+    "block_late",
+    "periodic_2",
+    "periodic_3",
+    "periodic_5",
+    "sustained"
+  ],
+  "gates": [
+    0.02,
+    0.05,
+    0.1,
+    0.15,
+    0.2,
+    0.25,
+    0.3,
+    0.4,
+    0.5
+  ]
+}

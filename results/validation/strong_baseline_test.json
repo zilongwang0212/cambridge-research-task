@@ -1,0 +1,8 @@
+{
+  "paired_tasks": 200,
+  "gate_dte_wins": 47,
+  "ties": 100,
+  "gate_ife_wins": 53,
+  "wilcoxon_statistic": 9393.0,
+  "wilcoxon_pvalue": 0.41537835094636755
+}

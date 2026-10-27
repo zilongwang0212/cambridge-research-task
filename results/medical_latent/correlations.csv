@@ -1,0 +1,8 @@
+variable,spearman_with_effect_error
+factual_error,0.2976923076923077
+probe_x_r2,-0.1446153846153846
+probe_c_r2,-0.3815384615384615
+probe_dose_r2,-0.27
+probe_nuisance_r2,-0.12384615384615384
+probe_lag_auc,-0.29384615384615387
+frozen_effect_probe_mse,0.3507692307692308

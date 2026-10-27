@@ -1,0 +1,6 @@
+{
+  "selected_model": "jepa_1",
+  "criterion": "minimum H8 observational closure subject to <=10% H8 rollout-MSE degradation vs multi_step",
+  "outcome_mse_ceiling": 0.003847122322767973,
+  "counterfactual_metrics_used_for_selection": false
+}
