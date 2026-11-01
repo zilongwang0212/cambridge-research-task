@@ -1,6 +1,0 @@
-{
-  "mean_rank": "0.5 * percentile_rank(EP) + 0.5 * percentile_rank(EDTE)",
-  "worst_rank": "max(percentile_rank(EP), percentile_rank(EDTE))",
-  "two_stage": "minimize EDTE among candidates in the best EP quartile",
-  "ground_truth_use": "ED is evaluation-only and is not used to define or tune a score"
-}

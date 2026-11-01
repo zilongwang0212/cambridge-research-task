@@ -1,7 +1,0 @@
-{
-  "figure1": [
-    40,
-    7
-  ],
-  "note": "Figure 4 is the synthetic model-selection result. The optional foundation-model runner creates a separate external-validity figure without fabricating unavailable model outputs."
-}

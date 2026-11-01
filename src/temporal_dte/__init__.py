@@ -1,5 +1,3 @@
-"""Interventional diagnostics for temporal models."""
+"""Causal temporal diagnostics and Temporal JEPA experiments."""
 
-from .system import Dynamics, TRUE_DYNAMICS
-
-__all__ = ["Dynamics", "TRUE_DYNAMICS"]
+__all__: list[str] = []

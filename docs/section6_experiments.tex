@@ -245,11 +245,15 @@ trajectory MSE falls by $48.3\%$: JEPA improves early-block, alternating,
 and separated effects by $70.0\%$, $39.7\%$, and $38.3\%$, respectively,
 but worsens late-separated effect error by $32.7\%$.
 
-Figure~\ref{fig:jepa-main} visualizes the same three test metrics. The
-late-separated result highlights that absolute trajectory fidelity and
-treatment-effect fidelity are related but non-equivalent: JEPA improves
-the absolute $X$ trajectory under this schedule while worsening its
-contrast with no treatment.
+Figure~\ref{fig:jepa-main} visualizes the same three test metrics.
+Relative to multi-step prediction, Temporal JEPA improves absolute
+outcome trajectories under all five schedules and improves joint-state
+and treatment-effect trajectories in most settings. This simultaneous
+gain indicates that the method does not merely exchange predictive
+fidelity for effect accuracy. The late-separated schedule remains an
+informative exception: its absolute trajectory improves while its effect
+contrast worsens, showing that these two forms of fidelity are related
+but non-equivalent.
 
 \begin{figure*}[t]
     \centering
@@ -267,37 +271,69 @@ contrast with no treatment.
 \label{sec:ablation}
 
 We separate sensitivity of the training design from sensitivity of the
-observational selection rule. Full per-schedule and per-seed results are
-reported in Appendix~\ref{app:ablation-details}.
+observational selection rule. In Table~\ref{tab:jepa-ablation}, observed
+rollout and latent closure MSE are measured at horizon 8 on the
+observational validation set. Effect MSE is the horizon-16
+treatment-effect trajectory MSE averaged across the four intervention
+contrasts on the synthetic test set. The latter is reported only for
+analysis and is never used for model selection. All values are multiplied
+by $10^3$; full per-schedule and per-seed results are reported in
+Appendix~\ref{app:ablation-details}.
+
+\begin{table}[t]
+\centering
+\caption{Temporal JEPA ablations. Observed rollout and closure are
+horizon-8 validation metrics. Effect MSE is averaged over the four
+horizon-16 test contrasts. Values are multiplied by $10^3$; lower is
+better.}
+\label{tab:jepa-ablation}
+\small
+\begin{tabular}{lccc}
+\toprule
+Setting & Observed & Closure & Effect \\
+\midrule
+\multicolumn{4}{l}{\textit{Latent-target horizons ($m=0.99$)}} \\
+$\{1\}$       & 3.689 & 15.626 & 1.404 \\
+$\{8\}$       & 3.774 &  2.437 & 1.543 \\
+$\{1,2,4,8\}$ & \mathbf{3.673} & \mathbf{0.384} & \mathbf{1.360} \\
+\midrule
+\multicolumn{4}{l}{\textit{EMA momentum ($\mathcal H_J=\{1,2,4,8\}$)}} \\
+$m=0$     & 4.014 & 0.719 & 1.905 \\
+$m=0.9$   & 3.690 & 0.453 & \mathbf{1.289} \\
+$m=0.99$  & \mathbf{3.673} & \mathbf{0.384} & 1.360 \\
+$m=0.999$ & 3.705 & 0.498 & 1.849 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \paragraph{Single- versus multi-horizon latent targets.}
-We compare JEPA targets at $\{1\}$, $\{8\}$, and
-$\{1,2,4,8\}$. Multi-horizon matching reduces horizon-8 closure MSE
-from $0.015626$ for one-step JEPA and $0.002437$ for endpoint-only JEPA
-to $0.000384$. Their mean horizon-16 effect MSEs across schedules are
-$0.001404$, $0.001543$, and $0.001360$, respectively. Multi-horizon
-supervision therefore produces the most temporally closed latent
-transition, but effect improvement is not monotonic in closure: one-step
-JEPA remains competitive on the averaged effect metric.
+Fixing $m=0.99$, we compare latent targets at $\{1\}$, $\{8\}$, and
+$\{1,2,4,8\}$. Multi-horizon matching yields the lowest validation
+closure error while maintaining comparable observed rollout accuracy.
+It also gives the lowest mean treatment-effect error among these three
+choices. The relationship is not monotonic, however: one-step JEPA has
+substantially worse closure than endpoint-only JEPA but slightly lower
+effect error. Closure is therefore a useful transition diagnostic, not
+a sufficient certificate of effect accuracy.
 
 \paragraph{EMA momentum.}
-For multi-horizon JEPA, momentum values $m=0$, $0.9$, $0.99$, and
-$0.999$ yield mean horizon-16 effect MSEs of $0.001905$, $0.001289$,
-$0.001360$, and $0.001849$, respectively. Moderate target smoothing is
-beneficial, but larger momentum is not monotonically better. We retain
-the prespecified $m=0.99$ for the main comparison rather than retuning
-the reported method on counterfactual test performance.
+Fixing $\mathcal H_J=\{1,2,4,8\}$, moderate EMA smoothing improves both
+closure and mean effect accuracy relative to $m=0$. The lowest test
+effect error occurs at $m=0.9$, whereas the lowest validation closure
+occurs at $m=0.99$. We retain the prespecified $m=0.99$ in the main
+comparison rather than selecting momentum using counterfactual test
+effects. Performance deteriorates at $m=0.999$, suggesting that an
+overly slow target encoder can provide stale latent targets.
 
 \paragraph{JEPA weight and observational selection.}
-We train $\lambda_J\in\{0.1,1,10\}$. Increasing $\lambda_J$ lowers
-closure error but eventually violates the factual prediction gate. At
-the prespecified gate $\gamma=1.10$, selection horizons
-$H_c\in\{2,4,8\}$ all choose $\lambda_J=1$. The selected weight is,
-however, sensitive to the factual-fidelity tolerance: at $H_c=8$,
-$\gamma=1.05$, $1.10$, and $1.20$ select $\lambda_J=0.1$, $1$, and
-$10$, respectively, while no JEPA candidate satisfies the strict
-$\gamma=1.00$ gate. The tolerance is therefore a substantive trade-off,
-not an innocuous constant.
+We train $\lambda_J\in\{0.1,1,10\}$. Increasing the latent-loss weight
+reduces validation closure MSE but gradually increases observed rollout
+MSE. The prespecified validation rule excludes $\lambda_J=10$ because
+its rollout error exceeds the $1.10\times$ prediction gate, and selects
+$\lambda_J=1$ over $0.1$ because it has lower closure error. No
+counterfactual effect is used in this decision. Full weight, gate, and
+selection-horizon sensitivity results are reported in
+Appendix~\ref{app:ablation-details}.
 
 \subsection{Summary of Findings}
 

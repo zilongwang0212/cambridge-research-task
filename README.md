@@ -1,155 +1,136 @@
-# Cambridge Research Task: Beyond Forecasting Toward Temporal Understanding
+# Learning Causally Relevant Temporal States in Medical World Models
 
-Can an accurate medical world model be trusted to simulate how treatment effects
-emerge, accumulate, and decay? This repository provides a focused negative answer
-and a small proof of concept for improving that capability.
+This repository contains the focused proof of concept developed for the Cambridge
+research task *A foundation model that truly understands time*.
 
 ## Central claim
 
-Low factual prediction error does not certify that a world model has learned the
-controlled temporal dynamics needed for intervention simulation. In a transparent
-medical simulator, predictive training can (i) compress away history that modifies
-treatment response and (ii), even when that information is decodable from the
-latent state, fail to preserve and update it under multi-step action-conditioned
-transitions. We treat accurate effect trajectories under unseen treatment schedules
-as **behavioral evidence**—not a complete definition—of temporal understanding.
-An action-conditioned Temporal JEPA objective improves latent transition consistency
-without counterfactual outcomes or treatment-effect labels and improves effect
-prediction on three of four tested schedules.
+Accurate prediction of observed patient trajectories does not by itself certify
+accurate long-horizon treatment-effect simulation. In a controlled longitudinal
+medical system, finite latent states can omit treatment-relevant history; even when
+that information is recoverable from the encoded state, recursive transitions may
+fail to preserve it. We therefore test an action-conditioned **Temporal JEPA** that
+self-supervises multi-horizon latent dynamics from factual trajectories. It improves
+absolute trajectories and treatment-effect trajectories on most tested schedules,
+while one negative schedule shows that latent closure is useful evidence rather
+than a universal causal certificate.
 
-![Temporal JEPA results](figures/temporal_jepa/temporal_jepa.png)
+![Main intervention results](figures/temporal_jepa/interventional_test_metrics.png)
 
-## Study design
+## What is evaluated
 
-The controlled simulator contains current severity, a time-varying treatment-effect
-modifier, accumulated dose, lagged treatment, and an irrelevant nuisance variable.
-Treatment assignment follows a state-dependent clinician policy, so training data
-are ordinary factual longitudinal trajectories rather than paired counterfactuals.
+The simulator exposes severity (X_t), a treatment-effect modifier (C_t), dose
+memory, lagged treatment, and a nuisance variable. Training trajectories follow a
+state-dependent historical treatment policy. All variables needed for causal
+identification are observed or recoverable by construction, so the study isolates
+finite-model representation and transition errors rather than hidden confounding.
 
-The project follows four steps:
+The released experiments answer three questions:
 
-1. **Forecasting–effect separation.** Compare factual prediction error with dynamic
-   treatment-effect error under held-out schedules.
-2. **Latent information diagnosis.** Freeze each world model and probe which true
-   state variables are recoverable from its latent state.
-3. **Transition diagnosis.** Compare information available at the encoded future
-   state with information retained after rolling the learned transition forward.
-4. **Self-supervised intervention.** Train an action-conditioned Temporal JEPA that
-   predicts target-encoder representations of observed future histories:
+1. **Representation:** does latent compression retain information needed for
+   treatment-effect estimation?
+2. **Propagation:** does the learned transition preserve treatment-relevant
+   information during recursive rollout?
+3. **Improvement:** does multi-horizon latent self-supervision improve 16-step
+   trajectories under fixed treatment schedules?
 
-   \[
-   Z_t=E_\theta(H_t),\qquad
-   \widehat Z_{t+h}=P_\theta(Z_t,A_{t:t+h-1}),\qquad
-   \mathcal L_J=\sum_h\|\widehat Z_{t+h}-\operatorname{sg}
-   (E_{\bar\theta}(H_{t+h}))\|^2.
-   \]
+The final test reports:
 
-Model selection uses only factual validation quantities: minimum horizon-8 latent
-closure error subject to no more than 10% degradation in observed rollout error.
-Counterfactual metrics are reserved for final evaluation.
+- absolute (X)-trajectory MSE;
+- joint ((X,C))-trajectory MSE;
+- treatment-effect trajectory MSE, comparing each intervention schedule with no
+  future treatment.
 
-## Main results
+Counterfactual simulator outcomes are used only for final evaluation, never for
+training or hyperparameter selection.
 
-- With latent dimension 1, current severity remains recoverable
-  (`R² = 0.927`) while the effect modifier is largely lost (`R² = 0.073`). Factual
-  error is only about 2.6% worse than dimension 2, but intervention-effect error is
-  2.55 times larger.
-- Across 45 fitted models, horizon-16 transition rollout amplifies latent-state
-  error by a median factor of 4.82; 68.9% of models exceed a factor of 2.
-- Relative to an equally trained multi-step prediction baseline, selected Temporal
-  JEPA reduces horizon-16 effect MSE by 39.7% on alternating, 38.3% on separated,
-  and 70.0% on seen-block schedules (all 5/5 seeds improve). It worsens the
-  late-separated schedule by 32.7%, an important negative result.
-- Across no treatment and four fixed intervention schedules, Temporal JEPA lowers
-  mean horizon-16 absolute outcome-trajectory MSE by 29.2% relative to multi-step
-  prediction. It improves all five outcome trajectories, although better absolute
-  trajectories do not guarantee a better treatment-effect contrast on every
-  schedule.
-- Latent closure MSE falls from `0.0855` to `0.000718`, while observed rollout MSE
-  changes from `0.00441` to `0.00421`. Better closure is therefore associated with,
-  but does not universally guarantee, counterfactual temporal generalization.
-
-These simulations establish a mechanism-specific proof of concept. They do not
-establish causal identification from arbitrary observational data or prove that the
-model has a general human-like understanding of time.
-
-### Ablations and selection sensitivity
-
-The completed ablation suite separates training-design choices from validation-rule
-choices. All retrained variants use five seeds. Multi-horizon matching produces much
-lower horizon-8 closure error than either one-step or endpoint-only JEPA, but the
-lowest closure does not always yield the lowest effect error. EMA momentum `0.9`
-has the best mean horizon-16 effect MSE (`0.00129`) in this grid, followed by the
-original `0.99` setting (`0.00136`); no target smoothing and `0.999` are worse.
-This supports moderate EMA smoothing, not monotonic gains from larger momentum.
-
-Selection sensitivity is reported for closure horizons `1,2,4,8,16` and prediction
-gates `1.00,1.05,1.10,1.20`. At the prespecified `1.10` gate, closure horizons
-`2,4,8` all select `lambda_J=1`. The chosen weight changes under tighter or looser
-gates, so the 10% factual-fidelity tolerance is a substantive modeling choice rather
-than an innocuous constant. Exact outputs are in `results/temporal_jepa_ablation/`.
-
-## Repository map
+## Repository layout
 
 ```text
-src/temporal_dte/       Simulator, models, metrics, and experiment modules
-scripts/                Reproducible experiment entry points
-tests/                  Unit and smoke tests
-results/                Aggregated CSV/JSON outputs (checkpoints excluded)
-figures/                Generated paper-ready figures
-docs/EXPERIMENT_LOG.md  Detailed record of all exploratory experiments
-THEORY.md               Why factual prediction does not identify interventions
+src/temporal_dte/
+  medical_latent.py             simulator, Transformer encoder, probes
+  functional_use_experiment.py  factual data generator used by diagnostics
+  latent_test_validation.py     model bank for transition diagnosis
+  transition_diagnosis.py       encoded-state vs rolled-state audit
+  compositional_latent.py       rollout and schedule utilities
+  temporal_jepa.py              baselines and Temporal JEPA
+  temporal_jepa_ablation.py     horizon, EMA, and selection sensitivity
+
+scripts/                        one entry point per reported experiment
+results/                        aggregated CSV/JSON results
+figures/                        paper figures
+docs/                           report sections and experimental appendix
+tests/                          simulator and Temporal JEPA tests
 ```
 
-The paper-facing evidence is concentrated in:
+Exploratory experiments that are not used by the final report have been removed.
+Model checkpoints are intentionally excluded from Git because the scripts recreate
+them deterministically.
 
-- `scripts/run_medical_latent.py` — latent capacity and information probes;
-- `scripts/run_transition_diagnosis.py` — encoded-versus-rolled latent closure;
-- `scripts/run_temporal_jepa.py` — Temporal JEPA ablation and schedule tests;
-- `scripts/evaluate_interventional_trajectories.py` — absolute outcome and state
-  trajectory errors under each fixed evaluation schedule;
-- `scripts/run_temporal_jepa_ablation.py` — horizon, EMA, closure-horizon, and
-  prediction-gate sensitivity;
-- `results/medical_latent/`, `results/transition_diagnosis/`, and
-  `results/temporal_jepa/` — exact outputs behind the claims above.
-
-Earlier candidate-model, DTE-diagnostic, policy-shift, and training-objective
-experiments remain available as supporting analyses. See the detailed
-[experiment log](docs/EXPERIMENT_LOG.md).
-
-## Reproduce
+## Installation
 
 Python 3.10 or newer is required.
 
 ```bash
+git clone https://github.com/zilongwang0212/cambridge-research-task.git
+cd cambridge-research-task
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install -e '.[dev,torch]'
+make install
 make test
-make medical-latent
-make transition-diagnosis
-make temporal-jepa
-make temporal-jepa-ablation
 ```
 
-For a lightweight installation that excludes neural experiments:
+PyTorch runs on CPU; a GPU shortens training but is not required.
+
+## Reproduce the paper results
+
+Run the complete pipeline:
 
 ```bash
-python3 -m pip install -e '.[dev]'
-make core
+make reproduce
 ```
 
-Runs are seeded. Neural results aggregate five seeds; minor numeric differences may
-occur across PyTorch versions and hardware. Pretrained checkpoints are intentionally
-excluded because every reported model can be regenerated by the scripts.
+The dependency order matters. `latent-test` creates the checkpoints consumed by
+`transition-diagnosis`, and `temporal-jepa` creates those consumed by
+`trajectories`. The Makefile handles this automatically.
 
-## Scope
+To reproduce only one part:
 
-The proposed capability is **compositional interventional temporal
-generalization**: given local states and actions that have training support, the
-model should correctly compose them into effect trajectories for treatment timing
-patterns not observed as complete schedules during training. This is a deliberately
-narrow, falsifiable form of evidence for temporal understanding.
+```bash
+make medical-latent            # latent-capacity study and probes
+make transition-diagnosis      # trains/loads the 45-model bank, then audits rollout
+make temporal-jepa             # one-step, multi-step, and JEPA models
+make trajectories              # H=16 trajectory and effect evaluation
+make temporal-jepa-ablation    # latent horizons, EMA, and selection sensitivity
+```
+
+Each neural result aggregates five seeds. Generated checkpoints (`*.pt`) are local
+artifacts under `results/` and are ignored by Git. Aggregated tables and figures are
+written back to the corresponding `results/` and `figures/` subdirectories.
+
+## Main findings
+
+- At latent dimension 1, severity remains recoverable ((R^2=0.927)) while the
+  treatment-effect modifier is largely lost ((R^2=0.073)); factual error changes
+  little, but horizon-16 effect error is 2.55 times that of dimension 2.
+- Across 45 fitted models, the median horizon-16 rolled-to-encoded local-response
+  error amplification is 4.82 under alternating treatment.
+- Relative to multi-step prediction, Temporal JEPA reduces mean horizon-16
+  (X)-trajectory MSE by 29.2% and mean treatment-effect trajectory MSE by 48.3%.
+  It improves three of four treatment-effect schedules; late-separated treatment is
+  the reported negative result.
+
+These results support a narrow behavioral capability—reliable composition of
+treatment-conditioned temporal dynamics—not a claim of general human-like temporal
+understanding or causal identification from arbitrary observational data.
+
+## Report files
+
+- [`docs/section6_experiments.tex`](docs/section6_experiments.tex): empirical section
+- [`docs/appendix_b_experimental_details.tex`](docs/appendix_b_experimental_details.tex):
+  simulator, architecture, schedules, selection, and ablations
+- [`docs/sections_2_3.tex`](docs/sections_2_3.tex): formal setup
+- [`docs/section3_theory_revised.tex`](docs/section3_theory_revised.tex): theory draft
 
 ## License
 
