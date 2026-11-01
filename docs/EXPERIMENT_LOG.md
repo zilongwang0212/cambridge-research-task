@@ -219,6 +219,37 @@ and propagates available information. Larger states also increasingly encode the
 causally irrelevant nuisance (`R²≈0 -> 0.98`), showing that raw capacity is not a
 mechanism-quality measure. Outputs are in `results/medical_latent/`.
 
+## Temporal JEPA ablations and selection sensitivity
+
+`scripts/run_temporal_jepa_ablation.py` completes the training-design and
+model-selection sensitivity analyses. Each training variant uses the same model,
+data generator, prediction objective, JEPA weight (`lambda_J=1`), and five seeds.
+
+At horizon 8, one-step JEPA, endpoint-only JEPA, and multi-horizon JEPA with the
+original EMA momentum (`m=0.99`) obtain closure MSEs of `0.01563`, `0.00244`, and
+`0.000384`, respectively. Their mean horizon-16 effect MSEs across four schedules
+are `0.001404`, `0.001543`, and `0.001360`. Multi-horizon matching therefore
+strongly improves closure, but one-step JEPA remains competitive for effect
+estimation; closure is a diagnostic and selection proxy, not an effect guarantee.
+
+For multi-horizon JEPA, EMA momenta `0`, `0.9`, `0.99`, and `0.999` produce mean
+horizon-16 effect MSEs of `0.001905`, `0.001289`, `0.001360`, and `0.001849`.
+Moderate smoothing is favored, with `m=0.9` best in this finite grid. The original
+`m=0.99` conclusion remains positive relative to the multi-step predictive baseline,
+but it is not the optimal EMA value found by the ablation.
+
+The observational selection rule was recomputed for closure horizons
+`H_c in {1,2,4,8,16}` and prediction gates
+`gamma in {1.00,1.05,1.10,1.20}` without retraining or using counterfactual
+metrics. Under the prespecified `gamma=1.10`, horizons 2, 4, and 8 all select
+`lambda_J=1`. At horizon 8, `gamma=1.05`, `1.10`, and `1.20` select weights
+`0.1`, `1`, and `10`, respectively; no JEPA candidate meets the strict `1.00`
+gate. The gate therefore represents a real factual-fidelity tolerance and must be
+reported transparently.
+
+Outputs are stored in `results/temporal_jepa_ablation/`, with the summary figure in
+`figures/temporal_jepa_ablation/temporal_jepa_ablation.png`.
+
 ## License
 
 MIT

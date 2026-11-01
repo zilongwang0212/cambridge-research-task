@@ -68,6 +68,22 @@ These simulations establish a mechanism-specific proof of concept. They do not
 establish causal identification from arbitrary observational data or prove that the
 model has a general human-like understanding of time.
 
+### Ablations and selection sensitivity
+
+The completed ablation suite separates training-design choices from validation-rule
+choices. All retrained variants use five seeds. Multi-horizon matching produces much
+lower horizon-8 closure error than either one-step or endpoint-only JEPA, but the
+lowest closure does not always yield the lowest effect error. EMA momentum `0.9`
+has the best mean horizon-16 effect MSE (`0.00129`) in this grid, followed by the
+original `0.99` setting (`0.00136`); no target smoothing and `0.999` are worse.
+This supports moderate EMA smoothing, not monotonic gains from larger momentum.
+
+Selection sensitivity is reported for closure horizons `1,2,4,8,16` and prediction
+gates `1.00,1.05,1.10,1.20`. At the prespecified `1.10` gate, closure horizons
+`2,4,8` all select `lambda_J=1`. The chosen weight changes under tighter or looser
+gates, so the 10% factual-fidelity tolerance is a substantive modeling choice rather
+than an innocuous constant. Exact outputs are in `results/temporal_jepa_ablation/`.
+
 ## Repository map
 
 ```text
@@ -85,6 +101,8 @@ The paper-facing evidence is concentrated in:
 - `scripts/run_medical_latent.py` — latent capacity and information probes;
 - `scripts/run_transition_diagnosis.py` — encoded-versus-rolled latent closure;
 - `scripts/run_temporal_jepa.py` — Temporal JEPA ablation and schedule tests;
+- `scripts/run_temporal_jepa_ablation.py` — horizon, EMA, closure-horizon, and
+  prediction-gate sensitivity;
 - `results/medical_latent/`, `results/transition_diagnosis/`, and
   `results/temporal_jepa/` — exact outputs behind the claims above.
 
@@ -104,6 +122,7 @@ make test
 make medical-latent
 make transition-diagnosis
 make temporal-jepa
+make temporal-jepa-ablation
 ```
 
 For a lightweight installation that excludes neural experiments:

@@ -28,7 +28,8 @@ def _observational_batch(cfg, rng):
                                  rng, cfg.noise, "observational")
 
 
-def train_model(kind, seed, cfg, jepa_weight=1., latent_dim=8):
+def train_model(kind, seed, cfg, jepa_weight=1., latent_dim=8,
+                jepa_horizons=HORIZONS, ema_momentum=.99):
     """No counterfactual target or simulator state is used by any objective."""
     torch.manual_seed(seed); np.random.seed(seed); random.seed(seed)
     rng=np.random.default_rng(121000+1009*seed)
@@ -54,14 +55,14 @@ def train_model(kind, seed, cfg, jepa_weight=1., latent_dim=8):
             rolled=z0; terms=[]
             for h in range(1,cfg.train_horizon+1):
                 rolled=net.advance(rolled,actions[:,h-1])
-                if h in HORIZONS:
+                if h in jepa_horizons:
                     with torch.no_grad():
                         zstar=target.encode(tx[:,h:cfg.context+h],tc[:,h:cfg.context+h],
                                             tu[:,h:cfg.context+h],all_lag[:,h:cfg.context+h])
                     terms.append(torch.mean((F.normalize(rolled,dim=1)-F.normalize(zstar,dim=1))**2))
             loss=pred_loss+jepa_weight*torch.stack(terms).mean()
         opt.zero_grad(); loss.backward(); torch.nn.utils.clip_grad_norm_(net.parameters(),1.0); opt.step()
-        if kind=="jepa": _ema(target,net)
+        if kind=="jepa": _ema(target,net,ema_momentum)
     return net.eval()
 
 

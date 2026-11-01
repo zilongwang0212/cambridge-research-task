@@ -1,4 +1,4 @@
-.PHONY: install test core robustness combination two-stage multistep validation transformer medical-part1 medical-latent latent-diagnosis functional-use latent-test transition-diagnosis compositional-latent closure-training temporal-jepa synthetic clean
+.PHONY: install test core robustness combination two-stage multistep validation transformer medical-part1 medical-latent latent-diagnosis functional-use latent-test transition-diagnosis compositional-latent closure-training temporal-jepa temporal-jepa-ablation synthetic clean
 
 install:
 	python3 -m pip install -e .
@@ -53,6 +53,9 @@ closure-training:
 
 temporal-jepa:
 	MPLBACKEND=Agg PYTHONPATH=src python3 scripts/run_temporal_jepa.py
+
+temporal-jepa-ablation:
+	MPLBACKEND=Agg PYTHONPATH=src python3 scripts/run_temporal_jepa_ablation.py
 
 synthetic:
 	PYTHONPATH=src python3 scripts/run_synthetic.py
