@@ -60,6 +60,11 @@ Counterfactual metrics are reserved for final evaluation.
   JEPA reduces horizon-16 effect MSE by 39.7% on alternating, 38.3% on separated,
   and 70.0% on seen-block schedules (all 5/5 seeds improve). It worsens the
   late-separated schedule by 32.7%, an important negative result.
+- Across no treatment and four fixed intervention schedules, Temporal JEPA lowers
+  mean horizon-16 absolute outcome-trajectory MSE by 29.2% relative to multi-step
+  prediction. It improves all five outcome trajectories, although better absolute
+  trajectories do not guarantee a better treatment-effect contrast on every
+  schedule.
 - Latent closure MSE falls from `0.0855` to `0.000718`, while observed rollout MSE
   changes from `0.00441` to `0.00421`. Better closure is therefore associated with,
   but does not universally guarantee, counterfactual temporal generalization.
@@ -101,6 +106,8 @@ The paper-facing evidence is concentrated in:
 - `scripts/run_medical_latent.py` — latent capacity and information probes;
 - `scripts/run_transition_diagnosis.py` — encoded-versus-rolled latent closure;
 - `scripts/run_temporal_jepa.py` — Temporal JEPA ablation and schedule tests;
+- `scripts/evaluate_interventional_trajectories.py` — absolute outcome and state
+  trajectory errors under each fixed evaluation schedule;
 - `scripts/run_temporal_jepa_ablation.py` — horizon, EMA, closure-horizon, and
   prediction-gate sensitivity;
 - `results/medical_latent/`, `results/transition_diagnosis/`, and

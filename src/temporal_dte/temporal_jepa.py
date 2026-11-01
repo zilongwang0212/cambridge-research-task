@@ -9,7 +9,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 
-from .compositional_latent import evaluate
+from .compositional_latent import evaluate, fixed_schedule, simulate_future
 from .functional_use_experiment import generate_policy_batch
 from .medical_latent import Config, LatentWorldModel, lagged_action_tokens
 
@@ -90,6 +90,59 @@ def observed_diagnostics(net,cfg,seed,n=768,h=16):
     za=net.rollout(z0,actions)[1]; zs=net.rollout(z0,shuffled)[1]
     sensitivity=torch.mean(torch.linalg.vector_norm(F.normalize(za,dim=1)-F.normalize(zs,dim=1),dim=1)).item()
     for row in rows: row["action_sensitivity"]=sensitivity
+    return pd.DataFrame(rows)
+
+
+@torch.no_grad()
+def interventional_trajectory_diagnostics(net, cfg, seed, n=768, h=16):
+    """Evaluate absolute, noise-free trajectories under fixed test schedules.
+
+    These metrics are final synthetic-test diagnostics, not observational
+    validation quantities and not inputs to model selection.
+    """
+    rng = np.random.default_rng(81000 + seed)
+    x, c, d, u, a = generate_policy_batch(
+        n, cfg.context + 1, rng, cfg.noise, "observational"
+    )
+    z = net.encode(
+        torch.tensor(x[:, :cfg.context]),
+        torch.tensor(c[:, :cfg.context]),
+        torch.tensor(u[:, :cfg.context]),
+        torch.tensor(lagged_action_tokens(a[:, :cfg.context])),
+    )
+    rows = []
+    for schedule in (
+        "none",
+        "seen_block",
+        "alternating",
+        "separated",
+        "late_separated",
+    ):
+        actions = fixed_schedule(n, h, schedule)
+        truth = simulate_future(
+            x[:, cfg.context - 1],
+            c[:, cfg.context - 1],
+            d[:, cfg.context - 1],
+            u[:, cfg.context - 1],
+            a[:, cfg.context - 2],
+            actions,
+        )
+        pred = net.rollout(z, torch.tensor(actions))[0].numpy()
+        x_sqerr = (pred[:, :, 0] - truth[0]) ** 2
+        c_sqerr = (pred[:, :, 1] - truth[1]) ** 2
+        for hh in (1, 2, 4, 8, 16):
+            rows.append(
+                {
+                    "seed": seed,
+                    "schedule": schedule,
+                    "horizon": hh,
+                    "x_trajectory_mse": float(np.mean(x_sqerr[:, :hh])),
+                    "c_trajectory_mse": float(np.mean(c_sqerr[:, :hh])),
+                    "state_trajectory_mse": float(
+                        np.mean(np.stack([x_sqerr[:, :hh], c_sqerr[:, :hh]], -1))
+                    ),
+                }
+            )
     return pd.DataFrame(rows)
 
 
