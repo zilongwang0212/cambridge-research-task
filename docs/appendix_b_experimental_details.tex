@@ -117,19 +117,34 @@ automatically in observational clinical data.
 \label{app:data-generation}
 
 Training data are generated online rather than stored as a fixed cohort.
-Each of 600 optimization steps draws a fresh minibatch of 96 trajectories
-with a 16-step context and 8 supervised future transitions. The one-step,
-multi-step, and Temporal JEPA models use the same data-generating
-mechanism but independent seeded runs.
+At each of 600 gradient-update steps, we draw a fresh minibatch of 96
+trajectories from the historical data-generating process. Each trajectory
+contains a 16-step observed context followed by 8 factual future
+transitions. Training is therefore specified in optimization steps, not
+epochs over a fixed dataset: each model is exposed to $600\times96=57{,}600$
+fresh trajectory windows. For a given seed, the one-step, multi-step, and
+Temporal JEPA objectives receive the same sequence of factual training
+batches.
 
-For every trained seed, observational validation uses 768 newly generated
-trajectories and evaluates horizons $\{1,2,4,8,16\}$. Counterfactual
-testing uses a separate set of 768 initial patient histories. Within a
-seed, the same test histories and treatment schedules are used for every
-method, permitting paired comparisons. Random
-number streams for training, observational validation, and counterfactual
-testing are disjoint. Counterfactual outcomes and treatment-effect errors
-are never used for model selection.
+After the 600th update, we retain the final checkpoint; we do not perform
+early stopping or choose among intermediate checkpoints. For every seed,
+we then freeze the trained model and generate 768 new observational
+validation trajectories. Validation performs no backpropagation or
+parameter update, and validation trajectories are not merged into the
+training data. We report diagnostics at horizons
+$\{1,2,4,8,16\}$, while model selection uses only the horizon-8 observed
+rollout and latent-closure errors described in
+Appendix~\ref{app:model-selection-details}. After selecting
+$\lambda_J=1$, we evaluate the corresponding originally trained
+checkpoints without retraining.
+
+Final counterfactual testing uses a third, disjoint sample of 768 initial
+patient histories, each with a 16-step observed context. Within a seed,
+all methods use the same validation trajectories, test histories, and
+treatment schedules, enabling paired comparisons. Random-number streams
+for training, observational validation, and counterfactual testing are
+disjoint. Counterfactual outcomes and treatment-effect errors are never
+used for training, checkpoint selection, or hyperparameter selection.
 
 During counterfactual testing, future process noise is set to zero and
 both treatment branches begin from the identical simulated patient state.
@@ -146,10 +161,12 @@ Each history token contains
 \end{equation}
 where $r_s$ is the normalized position within the 16-step context window,
 linearly increasing from $-1$ to $0$. This feature is distinct from the
-trajectory length $T$. A linear embedding and
-sinusoidal positional encoding feed a two-layer Transformer encoder with
-four attention heads and model dimension 32. The last Transformer output
-is linearly compressed to $Z_t\in\mathbb R^{d_z}$.
+trajectory length $T$. The five-dimensional token is projected to model
+dimension 32 and added to a fixed sinusoidal positional encoding. It is
+then processed by a two-layer pre-norm Transformer encoder with four
+attention heads, feed-forward width 96, ReLU activation, and dropout
+$0.05$. The final token representation is linearly compressed to
+$Z_t\in\mathbb R^{d_z}$.
 
 The residual action-conditioned transition is
 \begin{equation}
@@ -157,18 +174,64 @@ The residual action-conditioned transition is
     =\widehat Z_t
     +0.25f_\theta([\widehat Z_t,A_t]),
 \end{equation}
-where $f_\theta$ is a two-layer MLP with hidden width 64 and $\tanh$
-activation. The decoder is a two-layer MLP mapping $Z$ to
-$(\widehat X,\widehat C)$. Unless otherwise stated, $d_z=8$.
+where $f_\theta$ is an MLP with input width $d_z+1$, hidden width 64,
+$\tanh$ activation, and output width $d_z$. The factor $0.25$ scales the
+residual update. The decoder is an MLP
+$d_z\rightarrow64\rightarrow2$ with a $\tanh$ hidden activation and
+outputs $(\widehat X,\widehat C)$. Unless otherwise stated, $d_z=8$.
+Table~\ref{tab:architecture-hyperparameters} gives the complete fixed
+configuration.
 
-We optimize using AdamW with learning rate $8\times10^{-4}$ and weight
-decay $10^{-4}$. Gradients are clipped to norm one. Multi-step outcome
-loss supervises all horizons $h=1,\ldots,8$ with linearly increasing
-weights from 1 to 1.5. Temporal
-JEPA uses normalized predicted and target representations at horizons
-$\{1,2,4,8\}$, an EMA target encoder with momentum $m=0.99$, and
-$\lambda_J\in\{0.1,1,10\}$. Every reported neural result aggregates
-five seeds $\{0,1,2,3,4\}$.
+\begin{table}[t]
+\centering
+\caption{World-model architecture and optimization settings shared by
+all main methods.}
+\label{tab:architecture-hyperparameters}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{ll}
+\toprule
+Component & Setting \\
+\midrule
+Observed context & 16 steps \\
+Factual training horizon & 8 steps \\
+Token features & $(X,C,U,A_{s-1},r_s)$ \\
+Transformer layers & 2 \\
+Model dimension & 32 \\
+Attention heads & 4 \\
+Transformer FFN width & 96 \\
+Transformer activation & ReLU \\
+Transformer dropout & 0.05 \\
+Normalization & pre-norm \\
+Latent dimension & $d_z=8$ \\
+Transition MLP & $(d_z+1)\rightarrow64\rightarrow d_z$ \\
+Transition activation & $\tanh$ \\
+Residual scale & 0.25 \\
+Outcome decoder & $d_z\rightarrow64\rightarrow2$ \\
+Decoder activation & $\tanh$ \\
+Optimizer & AdamW \\
+Learning rate & $8\times10^{-4}$ \\
+Weight decay & $10^{-4}$ \\
+Gradient clipping & norm 1 \\
+Batch size & 96 \\
+Optimization budget & 600 updates \\
+Random seeds & $\{0,1,2,3,4\}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The one-step baseline supervises only $h=1$. Multi-step prediction and
+Temporal JEPA supervise observable outcomes at every horizon
+$h=1,\ldots,8$, using linearly increasing weights from 1 to 1.5.
+Temporal JEPA additionally matches normalized online and target
+representations at $\mathcal H_J=\{1,2,4,8\}$. The target encoder is
+initialized as a copy of the online encoder, receives no gradients, and
+is updated after each optimization step by EMA with momentum $m=0.99$.
+We train $\lambda_J\in\{0.1,1,10\}$ and select it using observational
+validation only. The backbone configuration, $\mathcal H_J$, and $m$
+are fixed for the main comparison; alternatives are reported as
+sensitivity analyses in Appendix~\ref{app:ablation-details}. Every
+reported neural result aggregates five seeds $\{0,1,2,3,4\}$.
 
 \subsection{Treatment Schedules and Effect Evaluation}
 \label{app:schedules}
