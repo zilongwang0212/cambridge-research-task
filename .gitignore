@@ -7,5 +7,5 @@ work/
 *.pt
 *.pth
 *.ckpt
-results/raw/
-results/foundation/
+results/
+figures/

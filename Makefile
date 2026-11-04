@@ -1,5 +1,5 @@
 .PHONY: install test reproduce medical-latent latent-test transition-diagnosis \
-	temporal-jepa trajectories temporal-jepa-ablation clean-cache
+	temporal-jepa trajectories temporal-jepa-ablation clean
 
 PYTHON := python3
 RUN := MPLBACKEND=Agg PYTHONPATH=src $(PYTHON)
@@ -32,6 +32,7 @@ trajectories: temporal-jepa
 temporal-jepa-ablation:
 	$(RUN) scripts/run_temporal_jepa_ablation.py
 
-clean-cache:
+clean:
 	find . -type d -name '__pycache__' -prune -exec find {} -depth -delete \;
 	find . -type d -name '.pytest_cache' -prune -exec find {} -depth -delete \;
+	rm -rf results figures

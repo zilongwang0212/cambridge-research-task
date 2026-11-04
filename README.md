@@ -1,75 +1,49 @@
 # Learning Causally Relevant Temporal States in Medical World Models
 
-This repository contains the focused proof of concept developed for the Cambridge
-research task *A foundation model that truly understands time*.
+Code for a focused proof of concept on treatment-conditioned temporal dynamics in
+medical world models.
 
 ## Central claim
 
-Accurate prediction of observed patient trajectories does not by itself certify
-accurate long-horizon treatment-effect simulation. In a controlled longitudinal
-medical system, finite latent states can omit treatment-relevant history; even when
-that information is recoverable from the encoded state, recursive transitions may
-fail to preserve it. We therefore test an action-conditioned **Temporal JEPA** that
-self-supervises multi-horizon latent dynamics from factual trajectories. It improves
-absolute trajectories and treatment-effect trajectories on most tested schedules,
-while one negative schedule shows that latent closure is useful evidence rather
-than a universal causal certificate.
+Accurate prediction of observed patient trajectories does not by itself guarantee
+accurate long-horizon treatment-effect simulation. A finite-capacity latent state
+may omit treatment-relevant history, and a learned transition may fail to preserve
+such information over time even when it is initially encoded. This repository
+studies these two failure modes and evaluates **Temporal JEPA**, an
+action-conditioned objective that learns multi-horizon latent dynamics from
+observed longitudinal trajectories without counterfactual labels.
 
-![Main intervention results](figures/temporal_jepa/interventional_test_metrics.png)
-
-## What is evaluated
-
-The simulator exposes severity (X_t), a treatment-effect modifier (C_t), dose
-memory, lagged treatment, and a nuisance variable. Training trajectories follow a
-state-dependent historical treatment policy. All variables needed for causal
-identification are observed or recoverable by construction, so the study isolates
-finite-model representation and transition errors rather than hidden confounding.
-
-The released experiments answer three questions:
-
-1. **Representation:** does latent compression retain information needed for
-   treatment-effect estimation?
-2. **Propagation:** does the learned transition preserve treatment-relevant
-   information during recursive rollout?
-3. **Improvement:** does multi-horizon latent self-supervision improve 16-step
-   trajectories under fixed treatment schedules?
-
-The final test reports:
-
-- absolute (X)-trajectory MSE;
-- joint ((X,C))-trajectory MSE;
-- treatment-effect trajectory MSE, comparing each intervention schedule with no
-  future treatment.
-
-Counterfactual simulator outcomes are used only for final evaluation, never for
-training or hyperparameter selection.
-
-## Repository layout
+## Code structure
 
 ```text
 src/temporal_dte/
-  medical_latent.py             simulator, Transformer encoder, probes
-  functional_use_experiment.py  factual data generator used by diagnostics
-  latent_test_validation.py     model bank for transition diagnosis
-  transition_diagnosis.py       encoded-state vs rolled-state audit
-  compositional_latent.py       rollout and schedule utilities
-  temporal_jepa.py              baselines and Temporal JEPA
-  temporal_jepa_ablation.py     horizon, EMA, and selection sensitivity
+  medical_latent.py             simulator and latent world model
+  functional_use_experiment.py  observational trajectory generation
+  latent_test_validation.py     latent-capacity model bank
+  transition_diagnosis.py       representation-versus-transition audit
+  compositional_latent.py       intervention schedules and rollout utilities
+  temporal_jepa.py              predictive baselines and Temporal JEPA
+  temporal_jepa_ablation.py     training and selection ablations
 
-scripts/                        one entry point per reported experiment
-results/                        aggregated CSV/JSON results
-figures/                        paper figures
-docs/                           report sections and experimental appendix
-tests/                          simulator and Temporal JEPA tests
+scripts/
+  run_medical_latent.py
+  run_latent_test.py
+  run_transition_diagnosis.py
+  run_temporal_jepa.py
+  evaluate_interventional_trajectories.py
+  run_temporal_jepa_ablation.py
+
+tests/                           simulator and training smoke tests
 ```
 
-Exploratory experiments that are not used by the final report have been removed.
-Model checkpoints are intentionally excluded from Git because the scripts recreate
-them deterministically.
+Generated metrics, checkpoints, and figures are written to `results/` and
+`figures/`. These directories are intentionally not tracked because the complete
+pipeline recreates them.
 
 ## Installation
 
-Python 3.10 or newer is required.
+Python 3.10 or newer is required. The experiments run on CPU; a GPU only reduces
+training time.
 
 ```bash
 git clone https://github.com/zilongwang0212/cambridge-research-task.git
@@ -80,57 +54,41 @@ make install
 make test
 ```
 
-PyTorch runs on CPU; a GPU shortens training but is not required.
+## Reproduction
 
-## Reproduce the paper results
-
-Run the complete pipeline:
+Run the full pipeline from the repository root:
 
 ```bash
 make reproduce
 ```
 
-The dependency order matters. `latent-test` creates the checkpoints consumed by
-`transition-diagnosis`, and `temporal-jepa` creates those consumed by
-`trajectories`. The Makefile handles this automatically.
+The pipeline runs in the following order:
 
-To reproduce only one part:
+1. latent-capacity analysis;
+2. transition-propagation diagnosis;
+3. one-step, multi-step, and Temporal JEPA training;
+4. interventional trajectory evaluation;
+5. Temporal JEPA ablations.
+
+The Makefile handles dependencies automatically. In particular,
+`transition-diagnosis` uses the model bank produced by `latent-test`, and
+`trajectories` uses the checkpoints produced by `temporal-jepa`.
+
+Individual stages can also be run separately:
 
 ```bash
-make medical-latent            # latent-capacity study and probes
-make transition-diagnosis      # trains/loads the 45-model bank, then audits rollout
-make temporal-jepa             # one-step, multi-step, and JEPA models
-make trajectories              # H=16 trajectory and effect evaluation
-make temporal-jepa-ablation    # latent horizons, EMA, and selection sensitivity
+make medical-latent
+make transition-diagnosis
+make temporal-jepa
+make trajectories
+make temporal-jepa-ablation
 ```
 
-Each neural result aggregates five seeds. Generated checkpoints (`*.pt`) are local
-artifacts under `results/` and are ignored by Git. Aggregated tables and figures are
-written back to the corresponding `results/` and `figures/` subdirectories.
+To remove generated outputs and Python caches:
 
-## Main findings
-
-- At latent dimension 1, severity remains recoverable ((R^2=0.927)) while the
-  treatment-effect modifier is largely lost ((R^2=0.073)); factual error changes
-  little, but horizon-16 effect error is 2.55 times that of dimension 2.
-- Across 45 fitted models, the median horizon-16 rolled-to-encoded local-response
-  error amplification is 4.82 under alternating treatment.
-- Relative to multi-step prediction, Temporal JEPA reduces mean horizon-16
-  (X)-trajectory MSE by 29.2% and mean treatment-effect trajectory MSE by 48.3%.
-  It improves three of four treatment-effect schedules; late-separated treatment is
-  the reported negative result.
-
-These results support a narrow behavioral capability—reliable composition of
-treatment-conditioned temporal dynamics—not a claim of general human-like temporal
-understanding or causal identification from arbitrary observational data.
-
-## Report files
-
-- [`docs/section6_experiments.tex`](docs/section6_experiments.tex): empirical section
-- [`docs/appendix_b_experimental_details.tex`](docs/appendix_b_experimental_details.tex):
-  simulator, architecture, schedules, selection, and ablations
-- [`docs/sections_2_3.tex`](docs/sections_2_3.tex): formal setup
-- [`docs/section3_theory_revised.tex`](docs/section3_theory_revised.tex): theory draft
+```bash
+make clean
+```
 
 ## License
 
